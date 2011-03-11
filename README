@@ -1,0 +1,31 @@
+Extremly simplistic time-based Counters in Redis
+
+redis = Redis.connect
+
+counter = TimedCounter.new("test", redis)
+
+counter.incr(1)
+
+# get the last 5 minutes
+# returns [0, 0, 0, 0, 1]
+p counter.minutes(5.minutes.ago, 5)
+
+# get the last 60 minutes
+p counter.minutes(1.hour.ago, 60)
+
+# get the last 30 days
+p counter.days(30.days.ago, 30)
+
+
+Data is kept in Hashes in Redis (mostly to cut down on key sizes)
+
+- one total value
+- one years hash with a field per year eg. { 2010: value, 2011: value }
+- one hash per years with a field per month { 01: value, ...}
+- one hash per month with a field per day
+- one hash per day with a field per hour
+- one hash per hour with a field per minute
+
+Currently does not set any expires, probably should add some depending on the amount of counts kept. Might be sensible to delete the hour hashes after a few days. Performs all increments atomically instead of relying on rollups and other services. 
+
+No Idea how well this scales within Rails, runs fine with a couple hundred keys.
