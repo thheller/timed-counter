@@ -4,6 +4,6 @@ Gem::Specification.new do |s|
   s.name = "timed-counter"
   s.summary = "Simple Counters in Redis"
   s.description = "see above."
-  s.files = Dir["{app,lib,config}/**/*"] + ["MIT-LICENSE", "Rakefile", "Gemfile", "README.rdoc"]
+  s.files = Dir["{app,lib,config}/**/*"] + ["MIT-LICENSE", "Gemfile", "README"]
   s.version = "0.1.0"
 end
