@@ -8,7 +8,7 @@ class TimedCounter
     @key = key
     @root = Nest.new(key, redis)
 
-    @redis.sadd("timed_couters", @key)
+    @redis.sadd("timed_counters", @key)
   end
 
   # redis key to total will be "c:#{key}:total"
