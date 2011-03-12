@@ -19,6 +19,8 @@ p counter.days(30.days.ago, 30)
 
 Data is kept in Hashes in Redis (mostly to cut down on key sizes)
 
+Per Counter you'll get:
+
 - one total value
 - one years hash with a field per year eg. { 2010: value, 2011: value }
 - one hash per years with a field per month { 01: value, ...}
@@ -26,6 +28,19 @@ Data is kept in Hashes in Redis (mostly to cut down on key sizes)
 - one hash per day with a field per hour
 - one hash per hour with a field per minute
 
-Currently does not set any expires, probably should add some depending on the amount of counts kept. Might be sensible to delete the hour hashes after a few days. Performs all increments atomically instead of relying on rollups and other services. 
+Key Layout is: $tc:<key>:<timestamp part>
 
-No Idea how well this scales within Rails, runs fine with a couple hundred keys.
+Currently does not set any expires, probably should add some depending on the amount of counts kept. Might be sensible to delete the hour hashes after a few days. Performs all increments atomically instead of relying on rollups and other services. No Idea how well this scales, but should be able to increment a couple thousand counters per second.
+
+Redis Monitor Log:
+
+1299922276.799784 "multi"
+1299922276.800636 "incrby" "$tc:test:1:total" "1"
+1299922276.800728 "hincrby" "$tc:test:1:years" "2011" "1"
+1299922276.800762 "hincrby" "$tc:test:1:2011" "03" "1"
+1299922276.800789 "hincrby" "$tc:test:1:201103" "12" "1"
+1299922276.800817 "hincrby" "$tc:test:1:20110312" "10" "1"
+1299922276.800837 "hincrby" "$tc:test:1:2011031210" "31" "1"
+1299922276.800899 "exec"
+
+A hopefully accurate set of all counters keys is kept in "$tc_list" ("SMEMBERS $tc_list").

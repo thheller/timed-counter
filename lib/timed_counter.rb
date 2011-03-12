@@ -6,9 +6,7 @@ class TimedCounter
   def initialize(key, redis)
     @redis = redis
     @key = key
-    @root = Nest.new(key, redis)
-
-    @redis.sadd("timed_counters", @key)
+    @root = Nest.new("$tc", redis)[key]
   end
 
   # redis key to total will be "c:#{key}:total"
@@ -36,19 +34,28 @@ class TimedCounter
     # 2011-03-11: { 00: 0, 01: 0, 02: 0, ...} hours
     # 2011-03-11 11: { 00, 01, 02, ...} minutes
 
-    result = @redis.multi do
-      @root[:total].incrby(amount)
-      @root[:years].hincrby(year_key, amount)
-      @root[year_key].hincrby(month, amount)
-      @root[month_key].hincrby(day, amount)
-      @root[day_key].hincrby(hour, amount)
-      @root[hour_key].hincrby(min, amount)
+    pipeline = @redis.pipelined do
+      @redis.multi do
+        @root[:total].incrby(amount)
+        @root[:years].hincrby(year_key, amount)
+        @root[year_key].hincrby(month, amount)
+        @root[month_key].hincrby(day, amount)
+        @root[day_key].hincrby(hour, amount)
+        @root[hour_key].hincrby(min, amount)
+      end
+    end
+
+    result = pipeline.last
+
+    # if the total count equals our amount we created this key, so keep a list of active counters
+    if result[0] == amount
+      @redis.sadd("$tc_list", @key)
     end
 
     # for now just keep everything, time will tell how much data we are talking about
     # set_expires(result, amount)
 
-    true
+    result[0]
   end
 
   # only set expires when the the counter state == amount aka. we created it.
@@ -97,7 +104,7 @@ class TimedCounter
     end
     
     keys = hash.to_a.sort_by { |it| it[0] }
-    mres = @redis.multi do
+    mres = @redis.pipelined do
       keys.each do |key, values|
         @root[key].hmget(*values)
       end

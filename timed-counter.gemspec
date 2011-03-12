@@ -6,4 +6,6 @@ Gem::Specification.new do |s|
   s.description = "see above."
   s.files = Dir["{app,lib,config}/**/*"] + ["MIT-LICENSE", "Gemfile", "README"]
   s.version = "0.1.0"
+  s.add_dependency("redis")
+  s.add_dependency("nest")
 end
