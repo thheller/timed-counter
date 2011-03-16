@@ -47,16 +47,14 @@ class TimedCounter
     #
     ckey = make_key(key)
 
-    pipeline = @redis.pipelined do
-      @redis.multi do
-        node = @root[ckey]
-        node[:total].incrby(amount)
-        node[:years].hincrby(year_key, amount)
-        node[year_key].hincrby(month, amount)
-        node[month_key].hincrby(day, amount)
-        node[day_key].hincrby(hour, amount)
-        node[hour_key].hincrby(min, amount)
-      end
+    pipeline = @redis.multi do
+      node = @root[ckey]
+      node[:total].incrby(amount)
+      node[:years].hincrby(year_key, amount)
+      node[year_key].hincrby(month, amount)
+      node[month_key].hincrby(day, amount)
+      node[day_key].hincrby(hour, amount)
+      node[hour_key].hincrby(min, amount)
     end
 
     result = pipeline.last
