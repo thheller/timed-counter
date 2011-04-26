@@ -8,11 +8,39 @@ class TimedCounter
     @root = Nest.new("$tc", redis)
   end
 
-  def make_key(parts)
+  def convert_keys(parts)
     if parts.is_a?(Array)
-      parts.join("/")
+      if parts.length == 1
+        return convert_part(parts.first)
+      end
+
+      parts.collect { |it| convert_part(it) }.join("/")
     else
-      parts.to_s
+      convert_part(parts)
+    end
+  end
+
+  def convert_part(part)
+    if part.respond_to?(:id)
+      [part.class.name, part.id].join("#")
+    else
+      part.to_s
+    end
+  end
+
+  def make_keys(key)
+    if key.is_a?(Array)
+      depth = key.length
+      result = []
+
+      until depth == 0
+        result << convert_keys(key[0, depth])
+        depth -= 1
+      end
+
+      result
+    else
+      [convert_part(key)]
     end 
   end
 
@@ -45,10 +73,10 @@ class TimedCounter
     # 2011-03-11: { 00: 0, 01: 0, 02: 0, ...} hours
     # 2011-03-11 11: { 00, 01, 02, ...} minutes
     #
-    ckey = make_key(key)
+    keys = make_keys(key)
 
-    pipeline = @redis.pipelined do
-      @redis.multi do
+    pipeline = @redis.multi do
+      keys.each do |ckey|
         node = @root[ckey]
         node[:total].incrby(amount)
         node[:years].hincrby(year_key, amount)
@@ -63,7 +91,9 @@ class TimedCounter
 
     # if the total count equals our amount we created this key, so keep a list of active counters
     if result[0] == amount
-      @redis.sadd("$tc_list", ckey)
+      keys.each do |ckey|
+        @redis.sadd("$tc_list", ckey)
+      end
     end
 
     # for now just keep everything, time will tell how much data we are talking about
@@ -106,8 +136,10 @@ class TimedCounter
   end
 
   def reset!(key)
-    @redis.keys("#{@root[make_key(key)]}*").each do |c|
-      @redis.del(c)
+    make_keys(key).each do |ckey|
+      @redis.keys("#{@root[ckey]}*").each do |c|
+        @redis.del(c)
+      end
     end
   end
 
@@ -123,7 +155,7 @@ class TimedCounter
       hash[ts[0, ts_index]] << ts[ts_index, ts_size]
     end
 
-    ckey = make_key(key)
+    ckey = convert_keys(key)
     node = @root[ckey]
 
     keys = hash.to_a.sort_by { |it| it[0] }
@@ -137,21 +169,21 @@ class TimedCounter
   end
 
   def total(key)
-    @root[make_key(key)][:total].get.to_i
+    @root[convert_keys(key)][:total].get.to_i
   end
 
   def year(key, time = nil)
-    @root[make_key(key)][:years].hget(make_ts(time)[0, 4]).to_i
+    @root[convert_keys(key)][:years].hget(make_ts(time)[0, 4]).to_i
   end
 
   def month(key, time = nil)
     ts = make_ts(time)
-    @root[make_key(key)][ts[0, 4]].hget(ts[4, 2]).to_i
+    @root[convert_keys(key)][ts[0, 4]].hget(ts[4, 2]).to_i
   end
 
   def day(key, time = nil)
     ts = make_ts(time)
-    @root[make_key(key)][ts[0, 6]].hget(ts[6, 2]).to_i
+    @root[convert_keys(key)][ts[0, 6]].hget(ts[6, 2]).to_i
   end
 
   def days(key, start, count)
@@ -160,7 +192,7 @@ class TimedCounter
 
   def hour(key, time = nil)
     ts = make_ts(time)
-    @root[make_key(key)][ts[0, 8]].hget(ts[8, 2]).to_i
+    @root[convert_keys(key)][ts[0, 8]].hget(ts[8, 2]).to_i
   end
 
   def hours(key, start, count)
@@ -169,7 +201,7 @@ class TimedCounter
 
   def minute(key, time = nil)
     ts = make_ts(time)
-    @root[make_key(key)][ts[0, 10]].hget(ts[10, 2]).to_i
+    @root[convert_keys(key)][ts[0, 10]].hget(ts[10, 2]).to_i
   end
 
   def minutes(key, start, count)

@@ -1,5 +1,19 @@
 require File.dirname(__FILE__) + "/../lib/timed_counter.rb"
 
+class User
+  def initialize(id)
+    @id = id
+  end
+
+  attr_reader :id
+end
+
+class DoesNotRespondToId
+  def to_s
+    'yo' 
+  end
+end
+
 describe TimedCounter do
 
   before(:each) do 
@@ -10,9 +24,13 @@ describe TimedCounter do
   end
 
   it "should join array keys" do
-    @counter.make_key(:test).should == "test"
-    @counter.make_key([:user, 1]).should == "user/1"
-    @counter.make_key([:user, 1, :clicks]).should == "user/1/clicks"
+    @counter.make_keys(:test).should == ["test"]
+
+    # anything responding to .id will be converted to class.name#id (probably blows up under 1.8, should only use 1.9 anyways)
+    @counter.make_keys([:clicks, User.new(1)]).should == ["clicks/User#1", "clicks"]
+    @counter.make_keys([:views, User.new(5678)]).should == ["views/User#5678", "views"]
+
+    @counter.make_keys([:dummy, DoesNotRespondToId.new]).should == ["dummy/yo", "dummy"]
   end
 
   # could fail based on timing but im lazy
