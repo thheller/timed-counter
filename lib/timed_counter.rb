@@ -3,9 +3,18 @@ require 'redis'
 require 'nest'
 
 class TimedCounter
-  def initialize(redis)
+  def initialize(redis, options = {})
+    default_options = {
+      minutes: true,
+      hours: true,
+      days: true,
+      months: true,
+      years: true
+    }
+
     @redis = redis
     @root = Nest.new("$tc", redis)
+    @options = default_options.merge(options)
   end
 
   def convert_keys(parts)
@@ -79,11 +88,26 @@ class TimedCounter
       keys.each do |ckey|
         node = @root[ckey]
         node[:total].incrby(amount)
-        node[:years].hincrby(year_key, amount)
-        node[year_key].hincrby(month, amount)
-        node[month_key].hincrby(day, amount)
-        node[day_key].hincrby(hour, amount)
-        node[hour_key].hincrby(min, amount)
+
+        if @options[:years]
+          node[:years].hincrby(year_key, amount)
+        end
+
+        if @options[:months]
+          node[year_key].hincrby(month, amount)
+        end
+
+        if @options[:days]
+          node[month_key].hincrby(day, amount)
+        end
+
+        if @options[:hours]
+          node[day_key].hincrby(hour, amount)
+        end
+
+        if @options[:minutes]
+          node[hour_key].hincrby(min, amount)
+        end
       end
     end
 
