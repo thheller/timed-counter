@@ -200,7 +200,7 @@ class TimedCounter
     values.in_groups_of(count) do |key_values|
       colname = colnames.shift
 
-      0.upto(count - 1) do |idx|
+      count.times do |idx|
         table[start + (idx * 86400)][colname] = key_values[idx]
       end
     end
