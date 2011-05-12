@@ -8,5 +8,4 @@ Gem::Specification.new do |s|
   s.version = "0.9.0"
   s.add_dependency("redis", ">= 2.2.0")
   s.add_dependency("nest")
-  s.add_dependency("active_support")
 end
