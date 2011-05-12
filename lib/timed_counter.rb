@@ -54,7 +54,7 @@ class TimedCounter
   end
 
   def make_ts(time)
-    (time || Time.now).utc.strftime("%Y%m%d%H%M")
+    (time || Time.now).strftime("%Y%m%d%H%M")
   end
 
   # redis key to total will be "c:#{key}:total"
