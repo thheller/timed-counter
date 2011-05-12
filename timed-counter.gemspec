@@ -5,7 +5,8 @@ Gem::Specification.new do |s|
   s.summary = "Simple Counters in Redis"
   s.description = "see above."
   s.files = Dir["{app,lib,config}/**/*"] + ["MIT-LICENSE", "Gemfile", "README"]
-  s.version = "0.5.0"
+  s.version = "0.9.0"
   s.add_dependency("redis", ">= 2.2.0")
   s.add_dependency("nest")
+  s.add_dependency("active_support")
 end

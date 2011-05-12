@@ -33,8 +33,6 @@ Key Layout is: $tc:<key>:<timestamp part>
 
 Keys given may be arrays and will be joined with "/". eg. [:user, 1, :clicks] == "user/1/clicks"
 
-All Timestamps are kept as UTC in Redis.
-
 Currently does not set any expires, probably should add some depending on the amount of counts kept. Might be sensible to delete the hour hashes after a few days. Performs all increments atomically instead of relying on rollups and other services. No Idea how well this scales, but should be able to increment a couple thousand counters per second.
 
 Redis Monitor Log:

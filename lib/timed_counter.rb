@@ -2,6 +2,9 @@ require 'rubygems'
 require 'redis'
 require 'nest'
 
+require 'active_support'
+require 'active_support/core_ext/time/zones'
+
 class TimedCounter
   def initialize(redis, options = {})
     default_options = {
@@ -9,7 +12,8 @@ class TimedCounter
       hours: true,
       days: true,
       months: true,
-      years: true
+      years: true,
+      timezone: Time.zone
     }
 
     @redis = redis
@@ -54,7 +58,7 @@ class TimedCounter
   end
 
   def make_ts(time)
-    (time || Time.now).strftime("%Y%m%d%H%M")
+    (time || Time.now).in_time_zone(@options[:timezone]).strftime("%Y%m%d%H%M")
   end
 
   # redis key to total will be "c:#{key}:total"

@@ -34,6 +34,16 @@ describe TimedCounter do
       @counter.make_keys([:dummy, DoesNotRespondToId.new]).should == ["dummy/yo", "dummy"]
     end
 
+    it "should convert every timestamp to a given timezone before talking to redis" do
+      ts = Time.new(2011, 1, 1, 0, 0, 0, 0) # UTC
+
+      @counter_in_utc = TimedCounter.new(@redis, timezone: 'UTC')
+      @counter_in_utc.make_ts(ts).should == '201101010000'
+
+      @counter_in_cet = TimedCounter.new(@redis, timezone: 'CET')
+      @counter_in_cet.make_ts(ts).should == '201101010100'
+    end
+
     # could fail based on timing but im lazy
     it "should increment multiple values in a single call" do
       @counter.total(:test).should == 0
