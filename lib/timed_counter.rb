@@ -3,6 +3,7 @@ require 'redis'
 require 'nest'
 
 require 'active_support'
+require 'active_support/core_ext/array/grouping'
 require 'active_support/core_ext/time/zones'
 
 class TimedCounter
@@ -171,17 +172,59 @@ class TimedCounter
     end
   end
 
+  # this code stinks!
+  #
+  def days_table(keys, start, count)
+    converted = {}
+    keys.each do |k, v|
+      converted[k] = convert_keys(v) 
+    end
+    
+    hash = make_redis_hash(start, count, 86400, 6, 2)
+    hash_keys = hash.to_a.sort_by { |it| it[0] }
+
+    result = @redis.pipelined do
+      converted.each do |colname, key|
+        hash_keys.each do |month, days|
+          @root[key][month].hmget(*days)
+        end
+      end
+    end
+
+    values = result.flatten.collect(&:to_i)
+
+    table = Hash.new { |h, k| h[k] = {} }
+
+    colnames = keys.keys
+
+    values.in_groups_of(count) do |key_values|
+      colname = colnames.shift
+
+      0.upto(count - 1) do |idx|
+        table[start + (idx * 86400)][colname] = key_values[idx]
+      end
+    end
+
+    table
+  end
+
+  # wtf, doc ;)
+  def make_redis_hash(start, count, step_size, ts_index, ts_size = 2)
+    hash = Hash.new { |h, k| h[k] = [] }
+    count.times do |it|
+      ts = make_ts(start + (it * step_size))
+      hash[ts[0, ts_index]] << ts[ts_index, ts_size]
+    end
+    hash
+  end
+
 
   # start timestamp
   # count number of steps
   # step_size number of seconds to increment steps
   # ts_index index in 201103111200
   def query_hash_range(key, start, count, step_size, ts_index, ts_size = 2)
-    hash = Hash.new { |h, k| h[k] = [] }
-    count.times do |it|
-      ts = make_ts(start + (it * step_size))
-      hash[ts[0, ts_index]] << ts[ts_index, ts_size]
-    end
+    hash = make_redis_hash(start, count, step_size, ts_index, ts_size)
 
     ckey = convert_keys(key)
     node = @root[ckey]

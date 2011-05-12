@@ -24,6 +24,28 @@ describe TimedCounter do
       @counter.reset!(:test)
     end
 
+    it "should be generate tables" do
+      @counter.reset!(:test2)
+
+      ts1 = Time.mktime(2010,12,31)
+      ts2 = Time.mktime(2011,1,1)
+      ts3 = Time.mktime(2011,1,2)
+
+      @counter.incr(:test, 1, ts1)
+      @counter.incr(:test, 1, ts2)
+      @counter.incr(:test, 1, ts3)
+
+      @counter.incr(:test2, 1, ts1)
+      @counter.incr(:test2, 1, ts3)
+
+      @table = @counter.days_table({ cola: [:test], colb: [:test2] }, ts1, 3) 
+      @table.should be_an_instance_of(Hash)
+
+      @table[ts1].should == { cola: 1, colb: 1 }
+      @table[ts2].should == { cola: 1, colb: 0 }
+      @table[ts3].should == { cola: 1, colb: 1 }
+    end
+
     it "should join array keys" do
       @counter.make_keys(:test).should == ["test"]
 
